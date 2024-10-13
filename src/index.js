@@ -1,6 +1,6 @@
 require("dotenv").config();
-
-const { Client, IntentsBitField, ActivityType } = require("discord.js");
+const { Client, IntentsBitField, Collection, ActivityType } = require("discord.js");
+const fs = require("fs");
 
 const client = new Client({
   intents: [
@@ -12,7 +12,18 @@ const client = new Client({
     IntentsBitField.Flags.GuildEmojisAndStickers,
   ],
 });
-// on hone ke baad , console log krega, sirf console(to the terminal)
+
+// Create a collection to store commands
+client.commands = new Collection();
+
+// Load all command files
+const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.name, command);
+}
+
+// Bot is ready
 client.on("ready", (c) => {
   console.log(`✅ ${c.user.tag} is online.`);
 
@@ -23,64 +34,22 @@ client.on("ready", (c) => {
   });
 });
 
-// bot won't trigger itself, return here just returns
-client.on("messageCreate", (message) => {
-  //if author is bot, reply nhi dega ye
-  if (message.author.bot) {
-    return;
-  }
-
-  if (message.content === "hello") {
-    message.reply("hi");
-  }
-
-  if (message.content == "hi") {
-    message.reply("hello");
-  }
-
-  if (message.content == "bye") {
-    message.reply("Bye, CYA!");
-  }
-});
-
-//interaction with slash commands
-
-client.on("interactionCreate", (interaction) => {
+// Handle slash command interactions
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === "info") {
-    interaction.reply(
-      "Hi, This bot was created by user : an5hul .\nThis is a fun experimental bot, and may be risky at times if not used wisely !"
-    );
-  }
+  const command = client.commands.get(interaction.commandName);
 
-  if (interaction.commandName === "ping") {
-    interaction.reply(
-      `🍾Latency is ${
-        Date.now() - interaction.createdTimestamp
-      }ms. API Latency is ${Math.round(client.ws.ping)}ms`
-    );
-  }
+  if (!command) return;
 
-  if (interaction.commandName === "help") {
-    interaction.reply(
-      "Dobby is always present in service of master! \n all the commands are listed with required description."
-    );
-  }
-
-  if (interaction.commandName === "length") {
-    let usrinpt = interaction.options.get("yourtext");
-
-    let main_usrinpt = usrinpt.value;
-
-    let lengthofstringnum = main_usrinpt.length;
-
-    let lengthofstringstr = lengthofstringnum.toString();
-    interaction.reply(
-      "The length of text you entered was **" +
-        lengthofstringstr +
-        "** Characters."
-    ); //return .length of the string recieved
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    console.error(error);
+    interaction.reply({
+      content: "There was an error executing that command!",
+      ephemeral: true,
+    });
   }
 });
 
