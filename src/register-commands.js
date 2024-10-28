@@ -29,6 +29,10 @@ const commands = [
       }
     ]
   }, 
+  {
+    name: 'joke',
+    description: 'Replies with random joke',
+  },
 
 ];
 // commands lie above here careful
